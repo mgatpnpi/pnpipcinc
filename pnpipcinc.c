@@ -88,7 +88,7 @@ long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long ioctl_p
 ssize_t counter_read(struct file *f, char __user * buf, size_t count, loff_t *f_pos)
 {
 	unsigned int minor = *(unsigned int*)f->private_data;
-	unsigned int value = inl(cs1_port+4+((minor-1)*8));
+	unsigned int value = ioread32(cs2_mem_addr+15+((minor-1)*10));
 	char local_buf[256];
 	printk(KERN_INFO "pnpipcinc read %d from counter %d", value, minor);
 	sprintf(local_buf, "%d", value);
