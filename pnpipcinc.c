@@ -96,12 +96,13 @@ static ssize_t counter_read(struct file *f, char __user * buf, size_t count, lof
 	char local_buf[256];
 	printk(KERN_INFO "pnpipcinc read %d from counter %d", value, minor);
 	sprintf(local_buf, "%d", value);
-	if (copy_to_user(buf, local_buf, strlen(local_buf)))
+	if (copy_to_user(buf, local_buf, count))
 	{
 		return -EFAULT;
 	}
+	*f_pos += count;
 	printk(KERN_INFO "pnpipcinc read %d from counter %d ok", value, minor);
-	return 0;
+	return count;
 }
 
 static ssize_t counter_write(struct file *f, const char __user * buf, size_t count, loff_t *f_pos)
@@ -109,7 +110,7 @@ static ssize_t counter_write(struct file *f, const char __user * buf, size_t cou
 	unsigned int minor = *(unsigned int*)f->private_data;
 	unsigned int value;
 	char local_buf[256];
-	if(copy_from_user(local_buf, buf, strlen(buf)))
+	if(copy_from_user(local_buf, buf, count))
 	{
 		return -EFAULT;
 	}
@@ -117,11 +118,12 @@ static ssize_t counter_write(struct file *f, const char __user * buf, size_t cou
 	{
 		return -EFAULT;
 	}
+	*f_pos += count;
 	printk(KERN_INFO "pnpipcinc write %d to counter %d", value, minor);
 	iowrite32(value, cs2_mem_addr+11+(minor*10));
 	printk(KERN_INFO "pnpipcinc write %d to counter %d ok", value, minor);
 	
-	return 0;
+	return count;
 }
 
 static int counter_release(struct inode *inode, struct file* f)
