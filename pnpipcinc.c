@@ -17,7 +17,6 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
@@ -51,11 +50,14 @@ static int sn(struct pci_dev *pdev)
 }
 
 
-dev_t countermajorminor1;
-dev_t countermajorminor2;
+static dev_t countermajorminor0;
+static dev_t countermajorminor1;
 
-struct cdev * cdevcounter1;
-struct cdev * cdevcounter2;
+static struct class *counter0class = NULL;
+static struct class *counter1class = NULL;
+
+static struct cdev * cdevcounter0;
+static struct cdev * cdevcounter1;
 
 void __iomem *cs2_mem_addr;
 void __iomem *cs3_mem_addr;
@@ -67,8 +69,8 @@ unsigned int counters[2];
 int counter_open(struct inode *inode, struct file * f)
 {
 	unsigned int minor = iminor(inode);
-	counters[minor - 1] = minor;
-	f->private_data = &counters[minor-1];
+	counters[minor] = minor;
+	f->private_data = &counters[minor];
 
 	return 0;
 }
@@ -78,17 +80,17 @@ long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long ioctl_p
 	unsigned int minor = *(unsigned int*)f->private_data;
 	if ((ioctl_param & IOCTL_CMD_SET_LEADING_COUNTER) > 0)
 	{
-		outb(cs0_port, (minor-1) << 1);
+		outb(cs0_port, minor << 1);
 	}
-	iowrite8(0, cs2_mem_addr+10+((minor - 1)*10)); // Flush
-	iowrite8(ioctl_param & 127, cs2_mem_addr+9+((minor - 1)*10)); // Parameters and Frequency
+	iowrite8(0, cs2_mem_addr+10+(minor*10)); // Flush
+	iowrite8(ioctl_param & 127, cs2_mem_addr+9+(minor*10)); // Parameters and Frequency
 	return 0;
 }
 
 ssize_t counter_read(struct file *f, char __user * buf, size_t count, loff_t *f_pos)
 {
 	unsigned int minor = *(unsigned int*)f->private_data;
-	unsigned int value = ioread32(cs2_mem_addr+15+((minor-1)*10));
+	unsigned int value = ioread32(cs2_mem_addr+15+(minor*10));
 	char local_buf[256];
 	printk(KERN_INFO "pnpipcinc read %d from counter %d", value, minor);
 	sprintf(local_buf, "%d", value);
@@ -114,7 +116,7 @@ ssize_t counter_write(struct file *f, const char __user * buf, size_t count, lof
 		return -EFAULT;
 	}
 	printk(KERN_INFO "pnpipcinc write %d to counter %d", value, minor);
-	iowrite32(value, cs2_mem_addr+11+((minor-1)*10));
+	iowrite32(value, cs2_mem_addr+11+(minor*10));
 	printk(KERN_INFO "pnpipcinc write %d to counter %d ok", value, minor);
 	
 	return 0;
@@ -142,8 +144,8 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	int ret;
 	int serial_number;
+	char counter0name[128];
 	char counter1name[128];
-	char counter2name[128];
 
 	printk(KERN_INFO "pnpipcinc pci probe :");
 
@@ -169,13 +171,35 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	serial_number = sn(pdev);
 
+	ret = sprintf(counter0name, "pnpipcinc%dcounter0", serial_number);
 	ret = sprintf(counter1name, "pnpipcinc%dcounter1", serial_number);
-	ret = sprintf(counter2name, "pnpipcinc%dcounter2", serial_number);
+
+	ret = alloc_chrdev_region(&countermajorminor0, 0, 1, counter0name);
+	if (ret < 0)
+	{
+		printk(KERN_ERR "pnpipcinc allocate counter0 device numbers failed");
+
+		pci_release_regions(pdev);
+		printk(KERN_INFO "pnpipcinc pci regions released");
+	
+		pci_disable_device(pdev);
+		printk(KERN_INFO "pnpipcinc pci device disabled");
+		return ret;
+	}
+	printk(
+			KERN_INFO "pnpipcinc allocated %s character device with %d major and %d minor numbers",
+			counter0name,
+			MAJOR(countermajorminor0),
+			MINOR(countermajorminor0)
+			);
 
 	ret = alloc_chrdev_region(&countermajorminor1, 1, 1, counter1name);
 	if (ret < 0)
 	{
 		printk(KERN_ERR "pnpipcinc allocate counter1 device numbers failed");
+
+		unregister_chrdev_region(countermajorminor0, 1);
+		printk(KERN_INFO "pnpipcinc char devices unregistered");
 
 		pci_release_regions(pdev);
 		printk(KERN_INFO "pnpipcinc pci regions released");
@@ -191,39 +215,17 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			MINOR(countermajorminor1)
 			);
 
-	ret = alloc_chrdev_region(&countermajorminor2, 2, 1, counter2name);
+	cdevcounter0 = cdev_alloc();
+	cdev_init(cdevcounter0, &counter_fops);
+	cdevcounter0->owner = THIS_MODULE;
+	cdevcounter0->ops = &counter_fops;
+	ret = cdev_add(cdevcounter0, countermajorminor0, 1);
 	if (ret < 0)
 	{
-		printk(KERN_ERR "pnpipcinc allocate counter2 device numbers failed");
+		printk(KERN_ERR "pnpipcinc add counter0 character device failed");
 
+		unregister_chrdev_region(countermajorminor0, 1);
 		unregister_chrdev_region(countermajorminor1, 1);
-		printk(KERN_INFO "pnpipcinc char devices unregistered");
-
-		pci_release_regions(pdev);
-		printk(KERN_INFO "pnpipcinc pci regions released");
-	
-		pci_disable_device(pdev);
-		printk(KERN_INFO "pnpipcinc pci device disabled");
-		return ret;
-	}
-	printk(
-			KERN_INFO "pnpipcinc allocated %s character device with %d major and %d minor numbers",
-			counter2name,
-			MAJOR(countermajorminor2),
-			MINOR(countermajorminor2)
-			);
-
-	cdevcounter1 = cdev_alloc();
-	cdev_init(cdevcounter1, &counter_fops);
-	cdevcounter1->owner = THIS_MODULE;
-	cdevcounter1->ops = &counter_fops;
-	ret = cdev_add(cdevcounter1, countermajorminor1, 1);
-	if (ret < 0)
-	{
-		printk(KERN_ERR "pnpipcinc add counter1 character device failed");
-
-		unregister_chrdev_region(countermajorminor1, 1);
-		unregister_chrdev_region(countermajorminor2, 1);
 		printk(KERN_INFO "pnpipcinc char devices unregistered");
 	
 		pci_release_regions(pdev);
@@ -235,22 +237,22 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	}
 	printk(
 			KERN_INFO "pnpipcinc allocated and added %s character device representation",
-			counter1name);
+			counter0name);
 
-	cdevcounter2 = cdev_alloc();
-	cdev_init(cdevcounter2, &counter_fops);
-	cdevcounter2->owner = THIS_MODULE;
-	cdevcounter2->ops = &counter_fops;
-	ret = cdev_add(cdevcounter2, countermajorminor2, 1);
+	cdevcounter1 = cdev_alloc();
+	cdev_init(cdevcounter1, &counter_fops);
+	cdevcounter1->owner = THIS_MODULE;
+	cdevcounter1->ops = &counter_fops;
+	ret = cdev_add(cdevcounter1, countermajorminor1, 1);
 	if (ret < 0)
 	{
-		printk(KERN_ERR "pnpipcinc add counter2 character device failed");
+		printk(KERN_ERR "pnpipcinc add counter1 character device failed");
 
-		cdev_del(cdevcounter1);
+		cdev_del(cdevcounter0);
 		printk(KERN_INFO "pnpipcinc char devices representations deleted");
 
+		unregister_chrdev_region(countermajorminor0, 1);
 		unregister_chrdev_region(countermajorminor1, 1);
-		unregister_chrdev_region(countermajorminor2, 1);
 		printk(KERN_INFO "pnpipcinc char devices unregistered");
 	
 		pci_release_regions(pdev);
@@ -276,12 +278,17 @@ void remove (struct pci_dev *pdev)
 {
 	printk(KERN_INFO "pnpipcinc remove");
 
+	cdev_del(cdevcounter0);
 	cdev_del(cdevcounter1);
-	cdev_del(cdevcounter2);
 	printk(KERN_INFO "pnpipcinc char devices representations deleted");
 
+	class_destroy(counter0class);
+	class_destroy(counter1class);
+	printk(KERN_INFO "pnpipcinc classes of devices destroyed");
+
+
+	unregister_chrdev_region(countermajorminor0, 1);
 	unregister_chrdev_region(countermajorminor1, 1);
-	unregister_chrdev_region(countermajorminor2, 1);
 	printk(KERN_INFO "pnpipcinc char devices unregistered");
 
 	pci_release_regions(pdev);
