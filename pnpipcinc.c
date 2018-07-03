@@ -17,9 +17,11 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/device.h>
 #include <linux/pci.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
+#include <linux/kdev_t.h>
 #include <linux/types.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -258,7 +260,7 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			KERN_INFO "pnpipcinc created %s character device class",
 			counter1name);
 
-	if(device_create(counter0class, NULL, MAJOR(countermajorminor0), NULL, counter0name) == NULL)
+	if(device_create(counter0class, NULL, countermajorminor0, NULL, counter0name) == NULL)
 	{
 		printk(KERN_ERR "pnpipcinc create counter1 device class failed");
 
@@ -278,7 +280,7 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		return -1;
 	}
 
-	if(device_create(counter1class, NULL, MAJOR(countermajorminor1), NULL, counter1name) == NULL)
+	if(device_create(counter1class, NULL, countermajorminor1, NULL, counter1name) == NULL)
 	{
 		printk(KERN_ERR "pnpipcinc create counter1 device class failed");
 
