@@ -128,10 +128,11 @@ static ssize_t counter_write(struct file *f, const char __user * buf, size_t cou
 	iowrite8(ENABLE_FREQUENCY_COUNT | CLEAR_REG_COUNT, cs2_mem_addr+CS2_ADDR_OFFSET_CLEAR_START_COUNTER+(minor*10));
 	iowrite8(ENABLE_FREQUENCY_COUNT | CLEAR_REG_COUNT | CLEAR_COUNT, cs2_mem_addr+CS2_ADDR_OFFSET_CLEAR_START_COUNTER+(minor*10));
 	printk(KERN_INFO "pnpipcinc counter %d flushed", minor);
-	if (count > 256)
-		count = 256;
+	if (count > 255)
+		count = 255;
 	if(copy_from_user(local_buf, buf, count))
 		return -EFAULT;
+	local_buf[count] = '\0';
 	if (kstrtouint(local_buf, 0, &value))
 		return -EFAULT;
 
