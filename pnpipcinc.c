@@ -61,14 +61,14 @@ static struct class *counter1class = NULL;
 static struct cdev * cdevcounter0;
 static struct cdev * cdevcounter1;
 
-void __iomem *cs2_mem_addr;
-void __iomem *cs3_mem_addr;
-long cs0_port;
-long cs1_port;
+static void __iomem *cs2_mem_addr;
+static void __iomem *cs3_mem_addr;
+static long cs0_port;
+static long cs1_port;
 
-unsigned int counters[2];
+static unsigned int counters[2];
 
-int counter_open(struct inode *inode, struct file * f)
+static int counter_open(struct inode *inode, struct file * f)
 {
 	unsigned int minor = iminor(inode);
 	counters[minor] = minor;
@@ -77,7 +77,7 @@ int counter_open(struct inode *inode, struct file * f)
 	return 0;
 }
 
-long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long ioctl_param)
+static long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long ioctl_param)
 {
 	unsigned int minor = *(unsigned int*)f->private_data;
 	if ((ioctl_param & IOCTL_CMD_SET_LEADING_COUNTER) > 0)
@@ -89,7 +89,7 @@ long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long ioctl_p
 	return 0;
 }
 
-ssize_t counter_read(struct file *f, char __user * buf, size_t count, loff_t *f_pos)
+static ssize_t counter_read(struct file *f, char __user * buf, size_t count, loff_t *f_pos)
 {
 	unsigned int minor = *(unsigned int*)f->private_data;
 	unsigned int value = ioread32(cs2_mem_addr+15+(minor*10));
@@ -104,7 +104,7 @@ ssize_t counter_read(struct file *f, char __user * buf, size_t count, loff_t *f_
 	return 0;
 }
 
-ssize_t counter_write(struct file *f, const char __user * buf, size_t count, loff_t *f_pos)
+static ssize_t counter_write(struct file *f, const char __user * buf, size_t count, loff_t *f_pos)
 {
 	unsigned int minor = *(unsigned int*)f->private_data;
 	unsigned int value;
@@ -124,7 +124,7 @@ ssize_t counter_write(struct file *f, const char __user * buf, size_t count, lof
 	return 0;
 }
 
-int counter_release(struct inode *inode, struct file* f)
+static int counter_release(struct inode *inode, struct file* f)
 {
 	if (f->private_data)
 	{
@@ -279,6 +279,9 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		printk(KERN_INFO "pnpipcinc pci device disabled");
 		return -1;
 	}
+	printk(
+			KERN_INFO "pnpipcinc created %s character device",
+			counter0name);
 
 	if(device_create(counter1class, NULL, countermajorminor1, NULL, counter1name) == NULL)
 	{
@@ -299,6 +302,9 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		printk(KERN_INFO "pnpipcinc pci device disabled");
 		return -1;
 	}
+	printk(
+			KERN_INFO "pnpipcinc created %s character device",
+			counter1name);
 
 	cdevcounter0 = cdev_alloc();
 	cdev_init(cdevcounter0, &counter_fops);
