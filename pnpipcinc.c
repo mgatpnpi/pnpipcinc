@@ -71,6 +71,7 @@ static unsigned int counters[2];
 static int counter_open(struct inode *inode, struct file * f)
 {
 	unsigned int minor = iminor(inode);
+	// minor is 0 or 1 the char device minor number and the index of the counter
 	counters[minor] = minor;
 	f->private_data = &counters[minor];
 
@@ -82,24 +83,36 @@ static long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long 
 	unsigned int minor = *(unsigned int*)f->private_data;
 	if ((ioctl_param & IOCTL_CMD_SET_LEADING_COUNTER) > 0)
 	{
-		outb(cs0_port, minor << 1);
+		outb(cs0_port+CS0_ADDR_OFFSET_LEADING_AND_TOF, (minor << 1) + (int)((ioctl_param & IOCTL_CMD_SET_TOF) > 0));
 	}
-	iowrite8(0, cs2_mem_addr+10+(minor*10)); // Flush
-	iowrite8(ioctl_param & 127, cs2_mem_addr+9+(minor*10)); // Parameters and Frequency
+	outb(cs0_port+CS0_ADDR_OFFSET_INVERTED, (int)((ioctl_param & IOCTL_CMD_SET_SIGNAL_INVERTED) > 0) << (minor*4));
+	//outb(cs0_port+2, (int)((ioctl_param & IOCTL_CMD_FLUSH) > 0) << (minor*4));
+	outb(cs0_port+CS0_ADDR_OFFSET_FLUSH, 0 );
+	iowrite8(ioctl_param & 127, cs2_mem_addr+4+(minor*10)); // Parameters and Frequency
 	return 0;
 }
 
 static ssize_t counter_read(struct file *f, char __user * buf, size_t count, loff_t *f_pos)
 {
 	unsigned int minor = *(unsigned int*)f->private_data;
-	unsigned int value = ioread32(cs2_mem_addr+15+(minor*10));
+	unsigned int value = 0;
 	char local_buf[256];
+	int i;
+
+	for (i=0; i<4; i++)
+	{
+		value += (ioread8(cs2_mem_addr+CS2_ADDR_OFFSET_READ_SET_COUNTER+(minor*10)+i) & 0xff) << (i*8);
+	}
+
 	printk(KERN_INFO "pnpipcinc read %d from counter %d", value, minor);
 	sprintf(local_buf, "%d", value);
+	if (*f_pos >= strlen(local_buf))
+		return 0;
+	if (*f_pos + count >= strlen(local_buf))
+		count = strlen(local_buf) - *f_pos;
 	if (copy_to_user(buf, local_buf, count))
-	{
 		return -EFAULT;
-	}
+
 	*f_pos += count;
 	printk(KERN_INFO "pnpipcinc read %d from counter %d ok", value, minor);
 	return count;
@@ -110,18 +123,29 @@ static ssize_t counter_write(struct file *f, const char __user * buf, size_t cou
 	unsigned int minor = *(unsigned int*)f->private_data;
 	unsigned int value;
 	char local_buf[256];
+	int i;
+
+	iowrite8(ENABLE_FREQUENCY_COUNT | CLEAR_REG_COUNT, cs2_mem_addr+CS2_ADDR_OFFSET_CLEAR_START_COUNTER+(minor*10));
+	iowrite8(ENABLE_FREQUENCY_COUNT | CLEAR_REG_COUNT | CLEAR_COUNT, cs2_mem_addr+CS2_ADDR_OFFSET_CLEAR_START_COUNTER+(minor*10));
+	printk(KERN_INFO "pnpipcinc counter %d flushed", minor);
+	if (count > 256)
+		count = 256;
 	if(copy_from_user(local_buf, buf, count))
-	{
 		return -EFAULT;
-	}
 	if (kstrtouint(local_buf, 0, &value))
-	{
 		return -EFAULT;
-	}
+
 	*f_pos += count;
+
 	printk(KERN_INFO "pnpipcinc write %d to counter %d", value, minor);
-	iowrite32(value, cs2_mem_addr+11+(minor*10));
+	for (i=0; i<4; i++)
+	{
+		iowrite8((value >> i*8) & 0xff, cs2_mem_addr+CS2_ADDR_OFFSET_READ_WRITE_COUNTER+(minor*10)+i);
+	}
 	printk(KERN_INFO "pnpipcinc write %d to counter %d ok", value, minor);
+
+	iowrite8(ENABLE_FREQUENCY_COUNT | CLEAR_COUNT | START_COUNT | CLEAR_COUNT, cs2_mem_addr+CS2_ADDR_OFFSET_CLEAR_START_COUNTER+(minor*10));
+	printk(KERN_INFO "pnpipcinc counter %d started", minor);
 	
 	return count;
 }
@@ -136,12 +160,12 @@ static int counter_release(struct inode *inode, struct file* f)
 }
 
 static struct file_operations counter_fops = {
-	owner :		THIS_MODULE,
-	read :		counter_read,
-	write : 	counter_write,
-	unlocked_ioctl : 	counter_ioctl,
-	open :		counter_open,
-	release : 	counter_release,
+	.owner =		THIS_MODULE,
+	.read =			counter_read,
+	.write =	 	counter_write,
+	.unlocked_ioctl = 	counter_ioctl,
+	.open =			counter_open,
+	.release = 		counter_release,
 };
 
 static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
@@ -170,8 +194,14 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		return ret;
 	}
 
-	printk(KERN_INFO "pnpipcinc pci request regions ok");
 	pci_set_master(pdev);
+
+	cs0_port = pci_resource_start(pdev, 2);
+	cs1_port = pci_resource_start(pdev, 3);
+	cs2_mem_addr = pci_ioremap_bar(pdev, 4);
+	cs3_mem_addr = pci_ioremap_bar(pdev, 5);
+
+	printk(KERN_INFO "pnpipcinc pci request regions ok");
 
 	serial_number = sn(pdev);
 
@@ -359,11 +389,6 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			KERN_INFO "pnpipcinc allocated and added %s character device representation",
 			counter1name);
 
-	cs0_port = pci_resource_start(pdev, 2);
-	cs1_port = pci_resource_start(pdev, 3);
-	cs2_mem_addr = pci_ioremap_bar(pdev, 4);
-	cs3_mem_addr = pci_ioremap_bar(pdev, 5);
-	
 	return 0;
 }
 
