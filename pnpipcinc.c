@@ -215,6 +215,89 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			MINOR(countermajorminor1)
 			);
 
+	counter0class = class_create(THIS_MODULE, counter0name);
+	if (counter0class == NULL)
+	{
+		printk(KERN_ERR "pnpipcinc create counter0 device class failed");
+
+		unregister_chrdev_region(countermajorminor0, 1);
+		unregister_chrdev_region(countermajorminor1, 1);
+		printk(KERN_INFO "pnpipcinc char devices unregistered");
+
+		pci_release_regions(pdev);
+		printk(KERN_INFO "pnpipcinc pci regions released");
+	
+		pci_disable_device(pdev);
+		printk(KERN_INFO "pnpipcinc pci device disabled");
+		return -1;
+	}
+	printk(
+			KERN_INFO "pnpipcinc created %s character device class",
+			counter0name);
+
+	counter1class = class_create(THIS_MODULE, counter1name);
+	if (counter1class == NULL)
+	{
+		printk(KERN_ERR "pnpipcinc create counter1 device class failed");
+
+		class_destroy(counter0class);
+		printk(KERN_INFO "pnpipcinc classes of devices destroyed");
+
+		unregister_chrdev_region(countermajorminor0, 1);
+		unregister_chrdev_region(countermajorminor1, 1);
+		printk(KERN_INFO "pnpipcinc char devices unregistered");
+
+		pci_release_regions(pdev);
+		printk(KERN_INFO "pnpipcinc pci regions released");
+	
+		pci_disable_device(pdev);
+		printk(KERN_INFO "pnpipcinc pci device disabled");
+		return -1;
+	}
+	printk(
+			KERN_INFO "pnpipcinc created %s character device class",
+			counter1name);
+
+	if(device_create(counter0class, NULL, MAJOR(countermajorminor0), NULL, counter0name) == NULL)
+	{
+		printk(KERN_ERR "pnpipcinc create counter1 device class failed");
+
+		class_destroy(counter0class);
+		class_destroy(counter1class);
+		printk(KERN_INFO "pnpipcinc classes of devices destroyed");
+
+		unregister_chrdev_region(countermajorminor0, 1);
+		unregister_chrdev_region(countermajorminor1, 1);
+		printk(KERN_INFO "pnpipcinc char devices unregistered");
+
+		pci_release_regions(pdev);
+		printk(KERN_INFO "pnpipcinc pci regions released");
+	
+		pci_disable_device(pdev);
+		printk(KERN_INFO "pnpipcinc pci device disabled");
+		return -1;
+	}
+
+	if(device_create(counter1class, NULL, MAJOR(countermajorminor1), NULL, counter1name) == NULL)
+	{
+		printk(KERN_ERR "pnpipcinc create counter1 device class failed");
+
+		class_destroy(counter0class);
+		class_destroy(counter1class);
+		printk(KERN_INFO "pnpipcinc classes of devices destroyed");
+
+		unregister_chrdev_region(countermajorminor0, 1);
+		unregister_chrdev_region(countermajorminor1, 1);
+		printk(KERN_INFO "pnpipcinc char devices unregistered");
+
+		pci_release_regions(pdev);
+		printk(KERN_INFO "pnpipcinc pci regions released");
+	
+		pci_disable_device(pdev);
+		printk(KERN_INFO "pnpipcinc pci device disabled");
+		return -1;
+	}
+
 	cdevcounter0 = cdev_alloc();
 	cdev_init(cdevcounter0, &counter_fops);
 	cdevcounter0->owner = THIS_MODULE;
