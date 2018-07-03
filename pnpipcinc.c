@@ -373,6 +373,10 @@ void remove (struct pci_dev *pdev)
 	cdev_del(cdevcounter1);
 	printk(KERN_INFO "pnpipcinc char devices representations deleted");
 
+	device_destroy(counter0class, countermajorminor0);
+	device_destroy(counter1class, countermajorminor1);
+	printk(KERN_INFO "pnpipcinc char devices destroyed");
+
 	class_destroy(counter0class);
 	class_destroy(counter1class);
 	printk(KERN_INFO "pnpipcinc classes of devices destroyed");
