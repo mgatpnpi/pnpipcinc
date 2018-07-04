@@ -86,7 +86,7 @@ static long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long 
 	switch (ioctl_num)
 	{
 		case IOCTL_CMD_LEAD_COUNTER_AND_TOF:
-			outb(cs0_port+CS0_ADDR_OFFSET_LEADING_AND_TOF, (minor << 1) + ioctl_param);
+			outb(cs0_port+CS0_ADDR_OFFSET_LEADING_AND_TOF, ioctl_param);
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_LEAD_COUNTER_AND_TOF %lu counter %d", ioctl_param, minor);
 			break;
 		case IOCTL_CMD_REG_FREQUENCY:
@@ -121,7 +121,7 @@ static ssize_t counter_read(struct file *f, char __user * buf, size_t count, lof
 
 	for (i=0; i<4; i++)
 	{
-		value += (ioread8(cs2_mem_addr+CS2_ADDR_OFFSET_READ_SET_COUNTER+(minor*10)+i) & 0xff) << (i*8);
+		value += (ioread8(cs2_mem_addr+CS2_ADDR_OFFSET_READ_COUNTER+(minor*10)+i) & 0xff) << (i*8);
 	}
 
 	printk(KERN_INFO "pnpipcinc read %d from counter %d", value, minor);
@@ -158,7 +158,7 @@ static ssize_t counter_write(struct file *f, const char __user * buf, size_t cou
 	printk(KERN_INFO "pnpipcinc write %d to counter %d", value, minor);
 	for (i=0; i<4; i++)
 	{
-		iowrite8((value >> i*8) & 0xff, cs2_mem_addr+CS2_ADDR_OFFSET_READ_WRITE_COUNTER+(minor*10)+i);
+		iowrite8((value >> i*8) & 0xff, cs2_mem_addr+CS2_ADDR_OFFSET_READ_WRITE_PRESET+(minor*10)+i);
 	}
 	printk(KERN_INFO "pnpipcinc write %d to counter %d ok", value, minor);
 
