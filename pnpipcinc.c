@@ -15,10 +15,10 @@
  * */
 
 #include <linux/init.h>
-#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/pci.h>
+#include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/kdev_t.h>
@@ -27,7 +27,8 @@
 #include <asm/uaccess.h>
 #include "pnpipcinc.h"
 
-MODULE_AUTHOR("Golubev Mikhail <mgolubev86@gmail.com>");
+
+MODULE_AUTHOR("Mikhail Golubev  <mgolubev86@gmail.com>");
 MODULE_DESCRIPTION("pnpipcinc: Petersburg Nuclear Physics Institute PCI Neutron Counter device driver");
 MODULE_LICENSE("GPL");
 
@@ -81,14 +82,33 @@ static int counter_open(struct inode *inode, struct file * f)
 static long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long ioctl_param)
 {
 	unsigned int minor = *(unsigned int*)f->private_data;
-	if ((ioctl_param & IOCTL_CMD_SET_LEADING_COUNTER) > 0)
+
+	switch (ioctl_num)
 	{
-		outb(cs0_port+CS0_ADDR_OFFSET_LEADING_AND_TOF, (minor << 1) + (int)((ioctl_param & IOCTL_CMD_SET_TOF) > 0));
+		case IOCTL_CMD_LEAD_COUNTER_AND_TOF:
+			outb(cs0_port+CS0_ADDR_OFFSET_LEADING_AND_TOF, (minor << 1) + ioctl_param);
+			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_LEAD_COUNTER_AND_TOF %lu counter %d", ioctl_param, minor);
+			break;
+		case IOCTL_CMD_REG_FREQUENCY:
+			iowrite8(ioctl_param & 127, cs2_mem_addr+CS2_ADDR_OFFSET_FREQUENCY_AND_PARAMETERS+(minor*10)); // Parameters and Frequency
+			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_REG_FREQUENCY %lu counter %d", ioctl_param, minor);
+			break;
+		case IOCTL_CMD_INVERSE_SIGNAL:
+			outb(cs0_port+CS0_ADDR_OFFSET_INVERTED, ioctl_param << (minor*4));
+			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_INVERSE_SIGNAL %lu counter %d", ioctl_param, minor);
+			break;
+		case IOCTL_CMD_FORBID_ALLOW_CLEAR_COUNTER:
+			outb(cs0_port+CS0_ADDR_OFFSET_FLUSH, ioctl_param << (minor*4));
+			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_FORBID_ALLOW_CLEAR_COUNTER %lu counter %d", ioctl_param, minor);
+			break;
+		case IOCTL_CMD_CLEAR_AND_START_COUNTER:
+			iowrite8(ioctl_param, cs2_mem_addr+CS2_ADDR_OFFSET_CLEAR_START_COUNTER+(minor*10));
+			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_CLEAR_AND_START_COUNTER %lu counter %d", ioctl_param, minor);
+			break;
+		default:
+			return -EINVAL;
 	}
-	outb(cs0_port+CS0_ADDR_OFFSET_INVERTED, (int)((ioctl_param & IOCTL_CMD_SET_SIGNAL_INVERTED) > 0) << (minor*4));
-	//outb(cs0_port+2, (int)((ioctl_param & IOCTL_CMD_FLUSH) > 0) << (minor*4));
-	outb(cs0_port+CS0_ADDR_OFFSET_FLUSH, 0 );
-	iowrite8(ioctl_param & 127, cs2_mem_addr+4+(minor*10)); // Parameters and Frequency
+
 	return 0;
 }
 
@@ -125,9 +145,6 @@ static ssize_t counter_write(struct file *f, const char __user * buf, size_t cou
 	char local_buf[256];
 	int i;
 
-	iowrite8(ENABLE_FREQUENCY_COUNT | CLEAR_REG_COUNT, cs2_mem_addr+CS2_ADDR_OFFSET_CLEAR_START_COUNTER+(minor*10));
-	iowrite8(ENABLE_FREQUENCY_COUNT | CLEAR_REG_COUNT | CLEAR_COUNT, cs2_mem_addr+CS2_ADDR_OFFSET_CLEAR_START_COUNTER+(minor*10));
-	printk(KERN_INFO "pnpipcinc counter %d flushed", minor);
 	if (count > 255)
 		count = 255;
 	if(copy_from_user(local_buf, buf, count))
@@ -145,9 +162,6 @@ static ssize_t counter_write(struct file *f, const char __user * buf, size_t cou
 	}
 	printk(KERN_INFO "pnpipcinc write %d to counter %d ok", value, minor);
 
-	iowrite8(ENABLE_FREQUENCY_COUNT | CLEAR_COUNT | START_COUNT | CLEAR_COUNT, cs2_mem_addr+CS2_ADDR_OFFSET_CLEAR_START_COUNTER+(minor*10));
-	printk(KERN_INFO "pnpipcinc counter %d started", minor);
-	
 	return count;
 }
 
