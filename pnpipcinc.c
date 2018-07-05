@@ -28,9 +28,6 @@
 #include "pnpipcinc.h"
 
 
-MODULE_AUTHOR("Mikhail Golubev  <mgolubev86@gmail.com>");
-MODULE_DESCRIPTION("pnpipcinc: Petersburg Nuclear Physics Institute PCI Neutron Counter device driver");
-MODULE_LICENSE("GPL");
 
 static struct pci_device_id pnpipcinc_ids[] = {
 	{ PCI_DEVICE( 0x10b5, 0x90f1) },
@@ -64,8 +61,8 @@ static struct cdev * cdevcounter1;
 
 static void __iomem *cs2_mem_addr;
 static void __iomem *cs3_mem_addr;
-static long cs0_port;
-static long cs1_port;
+static unsigned long cs0_port;
+static unsigned long cs1_port;
 
 static unsigned int counters[2];
 
@@ -86,7 +83,7 @@ static long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long 
 	switch (ioctl_num)
 	{
 		case IOCTL_CMD_LEAD_COUNTER_AND_TOF:
-			outb(cs0_port+CS0_ADDR_OFFSET_LEADING_AND_TOF, ioctl_param);
+			outb(ioctl_param, cs0_port+CS0_ADDR_OFFSET_LEADING_AND_TOF);
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_LEAD_COUNTER_AND_TOF %lu counter %d", ioctl_param, minor);
 			break;
 		case IOCTL_CMD_REG_FREQUENCY:
@@ -94,11 +91,11 @@ static long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long 
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_REG_FREQUENCY %lu counter %d", ioctl_param, minor);
 			break;
 		case IOCTL_CMD_INVERSE_SIGNAL:
-			outb(cs0_port+CS0_ADDR_OFFSET_INVERTED, ioctl_param << (minor*4));
+			outb(ioctl_param << (minor*4), cs0_port+CS0_ADDR_OFFSET_INVERTED);
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_INVERSE_SIGNAL %lu counter %d", ioctl_param, minor);
 			break;
 		case IOCTL_CMD_FORBID_ALLOW_CLEAR_COUNTER:
-			outb(cs0_port+CS0_ADDR_OFFSET_FLUSH, ioctl_param << (minor*4));
+			outb(ioctl_param << (minor*4), cs0_port+CS0_ADDR_OFFSET_FLUSH);
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_FORBID_ALLOW_CLEAR_COUNTER %lu counter %d", ioctl_param, minor);
 			break;
 		case IOCTL_CMD_CLEAR_AND_START_COUNTER:
@@ -170,6 +167,7 @@ static int counter_release(struct inode *inode, struct file* f)
 	if (f->private_data)
 	{
 		f->private_data = NULL;
+                kfree(f->private_data);
 	}
 	return 0;
 }
@@ -334,6 +332,9 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	{
 		printk(KERN_ERR "pnpipcinc create counter1 device class failed");
 
+        	device_destroy(counter0class, countermajorminor0);
+        	printk(KERN_INFO "pnpipcinc char devices destroyed");
+
 		class_destroy(counter0class);
 		class_destroy(counter1class);
 		printk(KERN_INFO "pnpipcinc classes of devices destroyed");
@@ -362,6 +363,14 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	{
 		printk(KERN_ERR "pnpipcinc add counter0 character device failed");
 
+        	device_destroy(counter0class, countermajorminor0);
+        	device_destroy(counter1class, countermajorminor1);
+        	printk(KERN_INFO "pnpipcinc char devices destroyed");
+        
+        	class_destroy(counter0class);
+        	class_destroy(counter1class);
+        	printk(KERN_INFO "pnpipcinc classes of devices destroyed");
+
 		unregister_chrdev_region(countermajorminor0, 1);
 		unregister_chrdev_region(countermajorminor1, 1);
 		printk(KERN_INFO "pnpipcinc char devices unregistered");
@@ -386,8 +395,16 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	{
 		printk(KERN_ERR "pnpipcinc add counter1 character device failed");
 
-		cdev_del(cdevcounter0);
-		printk(KERN_INFO "pnpipcinc char devices representations deleted");
+        	device_destroy(counter0class, countermajorminor0);
+        	device_destroy(counter1class, countermajorminor1);
+        	printk(KERN_INFO "pnpipcinc char devices destroyed");
+        
+        	class_destroy(counter0class);
+        	class_destroy(counter1class);
+        	printk(KERN_INFO "pnpipcinc classes of devices destroyed");
+        
+        	cdev_del(cdevcounter1);
+        	printk(KERN_INFO "pnpipcinc char devices representations deleted");
 
 		unregister_chrdev_region(countermajorminor0, 1);
 		unregister_chrdev_region(countermajorminor1, 1);
@@ -404,29 +421,13 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			KERN_INFO "pnpipcinc allocated and added %s character device representation",
 			counter1name);
 
+
 	return 0;
 }
 
 void remove (struct pci_dev *pdev)
 {
 	printk(KERN_INFO "pnpipcinc remove");
-
-	cdev_del(cdevcounter0);
-	cdev_del(cdevcounter1);
-	printk(KERN_INFO "pnpipcinc char devices representations deleted");
-
-	device_destroy(counter0class, countermajorminor0);
-	device_destroy(counter1class, countermajorminor1);
-	printk(KERN_INFO "pnpipcinc char devices destroyed");
-
-	class_destroy(counter0class);
-	class_destroy(counter1class);
-	printk(KERN_INFO "pnpipcinc classes of devices destroyed");
-
-
-	unregister_chrdev_region(countermajorminor0, 1);
-	unregister_chrdev_region(countermajorminor1, 1);
-	printk(KERN_INFO "pnpipcinc char devices unregistered");
 
 	pci_release_regions(pdev);
 	printk(KERN_INFO "pnpipcinc pci regions released");
@@ -453,10 +454,34 @@ static int pnpipcinc_init(void)
 
 static void pnpipcinc_exit(void)
 {
+	printk(KERN_INFO "pnpipcinc exit start");
+
 	pci_unregister_driver(&pci_driver);
 	printk(KERN_INFO "pnpipcinc unloaded");
+
+	cdev_del(cdevcounter0);
+	cdev_del(cdevcounter1);
+	printk(KERN_INFO "pnpipcinc char devices representations deleted");
+
+
+	device_destroy(counter0class, countermajorminor0);
+	device_destroy(counter1class, countermajorminor1);
+	printk(KERN_INFO "pnpipcinc char devices destroyed");
+
+
+	class_destroy(counter0class);
+	class_destroy(counter1class);
+	printk(KERN_INFO "pnpipcinc classes of devices destroyed");
+
+	unregister_chrdev_region(countermajorminor0, 1);
+	unregister_chrdev_region(countermajorminor1, 1);
+	printk(KERN_INFO "pnpipcinc char devices unregistered");
+
 }
 
 
 module_init(pnpipcinc_init);
 module_exit(pnpipcinc_exit);
+MODULE_AUTHOR("Mikhail Golubev  <mgolubev86@gmail.com>");
+MODULE_DESCRIPTION("pnpipcinc: Petersburg Nuclear Physics Institute PCI Neutron Counter device driver");
+MODULE_LICENSE("GPL");
