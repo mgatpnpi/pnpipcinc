@@ -167,7 +167,6 @@ static int counter_release(struct inode *inode, struct file* f)
 	if (f->private_data)
 	{
 		f->private_data = NULL;
-                kfree(f->private_data);
 	}
 	return 0;
 }
