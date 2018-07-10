@@ -167,7 +167,6 @@ static int counter_release(struct inode *inode, struct file* f)
 	if (f->private_data)
 	{
 		f->private_data = NULL;
-                kfree(f->private_data);
 	}
 	return 0;
 }
@@ -456,9 +455,6 @@ static void pnpipcinc_exit(void)
 {
 	printk(KERN_INFO "pnpipcinc exit start");
 
-	pci_unregister_driver(&pci_driver);
-	printk(KERN_INFO "pnpipcinc unloaded");
-
 	cdev_del(cdevcounter0);
 	cdev_del(cdevcounter1);
 	printk(KERN_INFO "pnpipcinc char devices representations deleted");
@@ -476,6 +472,10 @@ static void pnpipcinc_exit(void)
 	unregister_chrdev_region(countermajorminor0, 1);
 	unregister_chrdev_region(countermajorminor1, 1);
 	printk(KERN_INFO "pnpipcinc char devices unregistered");
+
+	pci_unregister_driver(&pci_driver);
+	printk(KERN_INFO "pnpipcinc unloaded");
+
 
 }
 
