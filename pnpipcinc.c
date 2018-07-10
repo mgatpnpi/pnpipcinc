@@ -94,8 +94,8 @@ static long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long 
 			outb(ioctl_param << (minor*4), cs0_port+CS0_ADDR_OFFSET_INVERTED);
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_INVERSE_SIGNAL %lu counter %d", ioctl_param, minor);
 			break;
-		case IOCTL_CMD_FORBID_ALLOW_CLEAR_COUNTER:
-			outb(ioctl_param << (minor*4), cs0_port+CS0_ADDR_OFFSET_FLUSH);
+		case IOCTL_CMD_ALLOW_COUNTER:
+			outb(ioctl_param << (minor*4), cs0_port+CS0_ADDR_OFFSET_ALLOW);
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_FORBID_ALLOW_CLEAR_COUNTER %lu counter %d", ioctl_param, minor);
 			break;
 		case IOCTL_CMD_CLEAR_AND_START_COUNTER:
