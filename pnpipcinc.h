@@ -31,12 +31,12 @@ enum {
 					// d6 GATE on the front panel
 
 	CMD_CLEAR_AND_START_COUNTER,	// d0 allow counter
-					// d1 start counter
+					// d1 start counter (edge from 0 to 1)
 					// d2 allow preset
 					// d4 allow frequency generation
 
 	CMD_LEAD_COUNTER_AND_TOF,	// d0 TOF(TDC) enable
-					// d1 0/1 is counter0/counter1 with preset
+					// d1 0/1 -> counter0/counter1 is leading 
 
 	CMD_INVERSE_SIGNAL_COUNTERS,	// d0 counter0 inverted signal
 					// d4 counter1 inverted signal
