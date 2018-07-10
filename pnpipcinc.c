@@ -220,7 +220,7 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	ret = sprintf(counter0name, "pnpipcinc%dcounter0", serial_number);
 	ret = sprintf(counter1name, "pnpipcinc%dcounter1", serial_number);
 
-	ret = alloc_chrdev_region(&countermajorminor0, 0, 1, counter0name);
+	ret = alloc_chrdev_region(&countermajorminor0, 0, 1, "pnpicounter0");
 	if (ret < 0)
 	{
 		printk(KERN_ERR "pnpipcinc allocate counter0 device numbers failed");
@@ -239,7 +239,7 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			MINOR(countermajorminor0)
 			);
 
-	ret = alloc_chrdev_region(&countermajorminor1, 1, 1, counter1name);
+	ret = alloc_chrdev_region(&countermajorminor1, 1, 1, "pnpicounter1");
 	if (ret < 0)
 	{
 		printk(KERN_ERR "pnpipcinc allocate counter1 device numbers failed");
@@ -261,7 +261,7 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			MINOR(countermajorminor1)
 			);
 
-	counter0class = class_create(THIS_MODULE, counter0name);
+	counter0class = class_create(THIS_MODULE, "pnpicounterclass0");
 	if (counter0class == NULL)
 	{
 		printk(KERN_ERR "pnpipcinc create counter0 device class failed");
@@ -281,7 +281,7 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			KERN_INFO "pnpipcinc created %s character device class",
 			counter0name);
 
-	counter1class = class_create(THIS_MODULE, counter1name);
+	counter1class = class_create(THIS_MODULE, "pnpicounterclass1");
 	if (counter1class == NULL)
 	{
 		printk(KERN_ERR "pnpipcinc create counter1 device class failed");
@@ -459,11 +459,9 @@ static void pnpipcinc_exit(void)
 	cdev_del(cdevcounter1);
 	printk(KERN_INFO "pnpipcinc char devices representations deleted");
 
-
 	device_destroy(counter0class, countermajorminor0);
 	device_destroy(counter1class, countermajorminor1);
 	printk(KERN_INFO "pnpipcinc char devices destroyed");
-
 
 	class_destroy(counter0class);
 	class_destroy(counter1class);
@@ -475,7 +473,6 @@ static void pnpipcinc_exit(void)
 
 	pci_unregister_driver(&pci_driver);
 	printk(KERN_INFO "pnpipcinc unloaded");
-
 
 }
 
