@@ -87,15 +87,15 @@ static long counter_ioctl(struct file *f, unsigned int ioctl_num, unsigned long 
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_LEAD_COUNTER_AND_TOF %lu counter %d", ioctl_param, minor);
 			break;
 		case IOCTL_CMD_REG_FREQUENCY:
-			iowrite8(ioctl_param & 127, cs2_mem_addr+CS2_ADDR_OFFSET_FREQUENCY_AND_PARAMETERS+(minor*10)); // Parameters and Frequency
+			iowrite8(ioctl_param, cs2_mem_addr+CS2_ADDR_OFFSET_FREQUENCY_AND_PARAMETERS+(minor*10)); // Parameters and Frequency
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_REG_FREQUENCY %lu counter %d", ioctl_param, minor);
 			break;
-		case IOCTL_CMD_INVERSE_SIGNAL:
-			outb(ioctl_param << (minor*4), cs0_port+CS0_ADDR_OFFSET_INVERTED);
+		case IOCTL_CMD_INVERSE_SIGNAL_COUNTERS:
+			outb(ioctl_param, cs0_port+CS0_ADDR_OFFSET_INVERTED);
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_INVERSE_SIGNAL %lu counter %d", ioctl_param, minor);
 			break;
-		case IOCTL_CMD_ALLOW_COUNTER:
-			outb(ioctl_param << (minor*4), cs0_port+CS0_ADDR_OFFSET_ALLOW);
+		case IOCTL_CMD_ALLOW_COUNTERS:
+			outb(ioctl_param, cs0_port+CS0_ADDR_OFFSET_ALLOW);
 			printk(KERN_INFO "pnpipcinc ioctl IOCTL_CMD_FORBID_ALLOW_CLEAR_COUNTER %lu counter %d", ioctl_param, minor);
 			break;
 		case IOCTL_CMD_CLEAR_AND_START_COUNTER:

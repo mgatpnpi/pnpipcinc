@@ -8,8 +8,8 @@ ID = sys.argv[1]
 IOCTL_CMD_REG_FREQUENCY = 30720
 IOCTL_CMD_CLEAR_AND_START_COUNTER = 30721
 IOCTL_CMD_LEAD_COUNTER_AND_TOF = 30722
-IOCTL_CMD_INVERSE_SIGNAL = 30723
-IOCTL_CMD_ALLOW_COUNTER = 30724
+IOCTL_CMD_INVERSE_SIGNAL_COUNTERS = 30723
+IOCTL_CMD_ALLOW_COUNTERS = 30724
 
 
 
@@ -19,12 +19,9 @@ f0 = open('/dev/pnpipcinc{}counter0'.format(ID), 'wb')
 f1 = open('/dev/pnpipcinc{}counter1'.format(ID), 'wb')
 
 fcntl.ioctl(f0, IOCTL_CMD_LEAD_COUNTER_AND_TOF, 0)
-fcntl.ioctl(f0, IOCTL_CMD_INVERSE_SIGNAL, 0)
-fcntl.ioctl(f1, IOCTL_CMD_INVERSE_SIGNAL, 0)
-fcntl.ioctl(f0, IOCTL_CMD_ALLOW_COUNTER, 0)
-fcntl.ioctl(f1, IOCTL_CMD_ALLOW_COUNTER, 0)
+fcntl.ioctl(f0, IOCTL_CMD_INVERSE_SIGNAL_COUNTERS, 0)
+fcntl.ioctl(f0, IOCTL_CMD_ALLOW_COUNTERS, 0)
 fcntl.ioctl(f0, IOCTL_CMD_REG_FREQUENCY, FREQUENCY_12500HZ+32)
-fcntl.ioctl(f1, IOCTL_CMD_REG_FREQUENCY, FREQUENCY_12500HZ+32)
 fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 4)
 fcntl.ioctl(f1, IOCTL_CMD_CLEAR_AND_START_COUNTER, 4)
 f1.close()
@@ -38,15 +35,12 @@ f1.write('1000003456')
 f1.close()
 
 f0 = open('/dev/pnpipcinc{}counter0'.format(ID), 'wb')
-f1 = open('/dev/pnpipcinc{}counter1'.format(ID), 'wb')
-fcntl.ioctl(f0, IOCTL_CMD_ALLOW_COUNTER, 1)
-fcntl.ioctl(f1, IOCTL_CMD_ALLOW_COUNTER, 1)
-fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 12)
-fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 13)
-fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 15)
-fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 13)
+fcntl.ioctl(f0, IOCTL_CMD_ALLOW_COUNTERS, 17)
+fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 20)
+fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 21)
+fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 23)
+fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 21)
 f0.close()
-f1.close()
 
 time.sleep(1)
 
