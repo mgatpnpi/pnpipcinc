@@ -20,7 +20,7 @@ Examples of unacceptable behavior by participants include:
 - Trolling, insulting/derogatory comments, and personal or political views
 - Public or private haram
 - Publishing others’ private information, such as a physical or electronic address, without big corporations permission
-- Other conduct which could reasonably be considered inappropriate in a professional setting
+- Other conduct which could reasonably be considered inappropriate in a nonprofessional setting
 
 ## Our Responsibilities
 
