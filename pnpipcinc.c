@@ -186,6 +186,8 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	int serial_number;
 	char counter0name[128];
 	char counter1name[128];
+	char counter0class_name[128];
+	char counter1class_name[128];
 
 	printk(KERN_INFO "pnpipcinc pci probe :");
 
@@ -219,6 +221,8 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	ret = sprintf(counter0name, "pnpipcinc%dcounter0", serial_number);
 	ret = sprintf(counter1name, "pnpipcinc%dcounter1", serial_number);
+	ret = sprintf(counter0class_name, "pnpipcinc%dcounter0class", serial_number);
+	ret = sprintf(counter1class_name, "pnpipcinc%dcounter1class", serial_number);
 
 	ret = alloc_chrdev_region(&countermajorminor0, 0, 1, "pnpicounter0");
 	if (ret < 0)
@@ -261,7 +265,7 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			MINOR(countermajorminor1)
 			);
 
-	counter0class = class_create(THIS_MODULE, "pnpicounterclass0");
+	counter0class = class_create(THIS_MODULE, counter0class_name);
 	if (counter0class == NULL)
 	{
 		printk(KERN_ERR "pnpipcinc create counter0 device class failed");
@@ -281,7 +285,7 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			KERN_INFO "pnpipcinc created %s character device class",
 			counter0name);
 
-	counter1class = class_create(THIS_MODULE, "pnpicounterclass1");
+	counter1class = class_create(THIS_MODULE, counter1class_name);
 	if (counter1class == NULL)
 	{
 		printk(KERN_ERR "pnpipcinc create counter1 device class failed");
