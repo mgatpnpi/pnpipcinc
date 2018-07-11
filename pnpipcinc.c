@@ -23,8 +23,11 @@
 #include <linux/cdev.h>
 #include <linux/kdev_t.h>
 #include <linux/types.h>
+#include <linux/uaccess.h>
+#include <linux/delay.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
+
 #include "pnpipcinc.h"
 
 
@@ -42,10 +45,17 @@ static int sn(struct pci_dev *pdev)
 	/* read pci card serial number from eeprom
 	 * */
 	u32 eeprom_magic_addr = 0x00a00003;
-	u32 sn;
+	u32 sn = 0;
+	int count = 0;
 	pci_write_config_dword(pdev, 0x4c, eeprom_magic_addr);
-	pci_read_config_dword(pdev, 0x50, &sn);
-	printk(KERN_INFO "pnpipcinc got serial number %d or %x hex", sn, sn);
+
+	/* wait for eeprom */
+	while((sn==0)||(count < 100)){
+	    pci_read_config_dword(pdev, 0x50, &sn);
+	    mdelay(1);
+	    count++;
+	}
+	printk(KERN_INFO "pnpipcinc got serial number %d or 0x%x hex", sn, sn&0xffffffff);
 	return sn;
 }
 

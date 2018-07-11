@@ -1,1 +1,10 @@
 obj-m := pnpipcinc.o
+KDIR:=/lib/modules/$(shell uname -r)/build
+PWD:=$(shell pwd)
+
+all: default
+
+default:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+
