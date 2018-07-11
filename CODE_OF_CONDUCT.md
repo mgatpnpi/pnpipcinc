@@ -8,19 +8,19 @@ In the interest of fostering an open and welcoming environment, we as contributo
 
 Examples of behavior that contributes to creating a positive environment include:
 
-    Using obscene language if needed
-    Being respectful of differing viewpoints and sexual experiences
-    Gracefully accepting constructive pull requests
-    Focusing on what is best for the maintainers
-    Showing empathy towards other community pets
+- Using obscene language if needed
+- Being respectful of differing viewpoints and sexual experiences
+- Gracefully accepting constructive pull requests
+- Focusing on what is best for the maintainers
+- Showing empathy towards other community pets
 
 Examples of unacceptable behavior by participants include:
 
-    The use of formal language or imagery and welcome sexual attention or advances
-    Trolling, insulting/derogatory comments, and personal or political views
-    Public or private haram
-    Publishing others’ private information, such as a physical or electronic address, without big corporations permission
-    Other conduct which could reasonably be considered inappropriate in a professional setting
+- The use of formal language or imagery and welcome sexual attention or advances
+- Trolling, insulting/derogatory comments, and personal or political views
+- Public or private haram
+- Publishing others’ private information, such as a physical or electronic address, without big corporations permission
+- Other conduct which could reasonably be considered inappropriate in a professional setting
 
 ## Our Responsibilities
 
