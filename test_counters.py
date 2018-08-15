@@ -21,15 +21,17 @@ t1 = os.open('/dev/pnpipcinc{}timer1'.format(ID), os.O_RDWR)
 c0 = os.open('/dev/pnpipcinc{}counter0'.format(ID), os.O_RDWR)
 c1 = os.open('/dev/pnpipcinc{}counter1'.format(ID), os.O_RDWR)
 
-fcntl.ioctl(c0, IOCTL_CMD_LEAD_COUNTER_AND_TOF, 2)
-fcntl.ioctl(c0, IOCTL_CMD_ALLOW_COUNTERS, 1)
+fcntl.ioctl(c0, IOCTL_CMD_LEAD_COUNTER_AND_TOF, 0)
 
-fcntl.ioctl(t0, IOCTL_CMD_REG_FREQUENCY, FREQUENCY_12500HZ+32) # 32 (1<<5)  set for the counter that stops another on preset reached
-fcntl.ioctl(t1, IOCTL_CMD_REG_FREQUENCY, FREQUENCY_250KHZ)
+fcntl.ioctl(t0, IOCTL_CMD_REG_FREQUENCY, FREQUENCY_1MHZ+32) # 32 (1<<5)  set for the counter that stops another on preset reached
+fcntl.ioctl(t1, IOCTL_CMD_REG_FREQUENCY, FREQUENCY_1MHZ)
 fcntl.ioctl(t0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 4)
 fcntl.ioctl(t1, IOCTL_CMD_CLEAR_AND_START_COUNTER, 4)
-os.pwrite(t0, b'200000', 0)
-os.pwrite(t1, b'900000', 0)
+os.pwrite(t0, b'2000000', 0)
+os.pwrite(t1, b'2000000', 0)
+fcntl.ioctl(c0, IOCTL_CMD_ALLOW_COUNTERS, 0)
+fcntl.ioctl(c0, IOCTL_CMD_ALLOW_COUNTERS, 17)
+fcntl.ioctl(c0, IOCTL_CMD_LEAD_COUNTER_AND_TOF, 0)
 
 fcntl.ioctl(t0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 20)
 fcntl.ioctl(t1, IOCTL_CMD_CLEAR_AND_START_COUNTER, 20)
@@ -37,18 +39,16 @@ fcntl.ioctl(t0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 21)
 fcntl.ioctl(t1, IOCTL_CMD_CLEAR_AND_START_COUNTER, 21)
 fcntl.ioctl(t0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 23)
 fcntl.ioctl(t1, IOCTL_CMD_CLEAR_AND_START_COUNTER, 23)
-fcntl.ioctl(t0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 21)
-fcntl.ioctl(t1, IOCTL_CMD_CLEAR_AND_START_COUNTER, 21)
 
-for i in range(10):
-    time.sleep(1)
+time.sleep(3)
 
 
-    print("timer 0 12500 Hz ", i+1, " sec ", os.pread(f0, 10, 0))
-    print("timer 1 250 kHz ", i+1, " sec ", os.pread(f1, 10, 0))
+print("timer 0 12500 Hz ",  os.pread(t0, 10, 0))
+print("timer 1 250 kHz ",  os.pread(t1, 10, 0))
 
-    print("counter 0   ", i+1, " sec   ", os.pread(c0, 10, 0))
-    print("counter 1   ", i+1, " sec   ", os.pread(c1, 10, 0))
+print("counter 0   ", os.pread(c0, 10, 0))
+print("counter 1   ", os.pread(c1, 10, 0))
+
 os.close(t0)
 os.close(t1)
 fcntl.ioctl(c0, IOCTL_CMD_ALLOW_COUNTERS, 0)
