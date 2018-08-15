@@ -19,7 +19,7 @@ FREQUENCY_1MHZ, FREQUENCY_500KHZ, FREQUENCY_250KHZ, FREQUENCY_125KHZ, FREQUENCY_
 f0 = os.open('/dev/pnpipcinc{}timer0'.format(ID), os.O_RDWR)
 f1 = os.open('/dev/pnpipcinc{}timer1'.format(ID), os.O_RDWR)
 
-fcntl.ioctl(f0, IOCTL_CMD_REG_FREQUENCY, FREQUENCY_12500HZ+32) // 32 (1<<5) # set for the counter that stops another on preset reached
+fcntl.ioctl(f0, IOCTL_CMD_REG_FREQUENCY, FREQUENCY_12500HZ+32) # 32 (1<<5)  set for the counter that stops another on preset reached
 fcntl.ioctl(f1, IOCTL_CMD_REG_FREQUENCY, FREQUENCY_250KHZ)
 fcntl.ioctl(f0, IOCTL_CMD_CLEAR_AND_START_COUNTER, 4)
 fcntl.ioctl(f1, IOCTL_CMD_CLEAR_AND_START_COUNTER, 4)
